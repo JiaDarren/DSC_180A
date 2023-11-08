@@ -1,4 +1,2 @@
 # ignore ALL files in data directory
 data/ 
-
-.DS_Store
