@@ -25,7 +25,7 @@ def eval_feature(X, i):
     X[:,i] = orig_feature
     
     # Save evaluated scores
-    return 0, 0
+    return i
 
 if __name__ == '__main__':
     print("Importing Data")
@@ -42,6 +42,7 @@ if __name__ == '__main__':
         outputs = pool.starmap(eval_feature, input_args) 
     end = datetime.now()
 
-    # print(f"Total time: {end - start}")
+    print(f"Total time: {end - start}")
+    print(np.sum(outputs != np.arange(0, 240)) / 240)
     # with open("file.txt", "w") as out_file:
     #     out_file.write(str(outputs))

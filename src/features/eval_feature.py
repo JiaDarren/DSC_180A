@@ -113,5 +113,5 @@ if __name__ == '__main__':
     end = datetime.now()
 
     print(f"Total time: {end - start}")
-    with open("file.txt", "w") as out_file:
+    with open("feature_scores.txt", "w") as out_file:
         out_file.write(str(outputs))
