@@ -15,11 +15,11 @@ import feature_eval_utils as fe_util
 
 DATA_PATH = '../../data'
 
-def eval_feature(X, i):
+def eval_feature(X, i, pool_set):
     # Randomize feature
     orig_feature = X[:,i]
     X[:,i] = [1] * len(X[:,i])
-    print(f"worker {os.getpid()}: {sum(X[0,:])}")
+    print(f"worker {os.getpid()}: {pool_set} {sum(X[0,:])}")
     # time.sleep(np.random.randint(10))
     # Restore orig Dataset
     X[:,i] = orig_feature
@@ -33,16 +33,17 @@ if __name__ == '__main__':
     feature_matrix = pd.read_csv(f'{DATA_PATH}/processed/feature_matrix.csv')
     
     print("Preparing Data for Feature Evaluation")  
-    
-    data = np.zeros([240, 240])
-    input_args = [(data, i) for i in range(240)]
+    nfeatures = 8
+    data = np.zeros([1, nfeatures])
 
-    print("Setting Pool")
-    with Pool() as pool:
-        outputs = pool.starmap(eval_feature, input_args) 
+    for pool_set in range(3):
+        print(f"\nSetting Pool {pool_set}")
+        input_args = [(data.copy(), i, pool_set) for i in range(nfeatures)]
+        with Pool(4) as pool:
+            outputs = pool.starmap(eval_feature, input_args) 
     end = datetime.now()
 
     print(f"Total time: {end - start}")
-    print(np.sum(outputs != np.arange(0, 240)) / 240)
+    # print(np.sum(outputs != np.arange(0, 240)) / 240)
     # with open("file.txt", "w") as out_file:
     #     out_file.write(str(outputs))

@@ -14,14 +14,14 @@ import feature_eval_utils as fe_util
 
 DATA_PATH = '../../data'
 
-def eval_feature(X, y, i, feature_names):
-    print(f"Evaluating Feature {i+1}: {feature_names[i]}")
+def eval_feature(X, y, i, pool_set, feature_names):
+    print(f"Pool {pool_set} Feature {i+1}: {feature_names[i]}")
     # Randomize feature
     orig_feature = X[:,i]
     np.random.shuffle(X[:,i])
 
     # Create New Datasets
-    X_train, X_valid, X_test, y_train, y_valid, y_test = fe_util.train_valid_test_split(X, y, random_state=42)
+    X_train, X_valid, X_test, y_train, y_valid, y_test = fe_util.train_valid_test_split(X, y, random_state=pool_set)
 
     X_train_tensor = torch.tensor(X_train, dtype=torch.float32)
     y_train_tensor = torch.tensor(y_train, dtype=torch.float32).reshape(-1, 1)
@@ -103,15 +103,17 @@ if __name__ == '__main__':
         feature_matrix.iloc[:,1:].columns
     ))
 
-    input_args = []
-    for i in tqdm(range(num_features)):
-        input_args.append((X.copy(), y, i, feature_names))
 
-    print("Setting Pool")
-    with Pool() as pool:
-        outputs = pool.starmap(eval_feature, input_args) 
+    for pool_set in range(6):
+        print(f"Setting Pool {pool_set}")
+        input_args = []
+        for i in tqdm(range(num_features)):
+            input_args.append((X.copy(), y, i, pool_set, feature_names))
+        with Pool() as pool:
+            outputs = pool.starmap(eval_feature, input_args) 
+
+        with open(f"feature_scores_{pool_set}.txt", "w") as out_file:
+            out_file.write(str(outputs))
+
     end = datetime.now()
-
     print(f"Total time: {end - start}")
-    with open("feature_scores.txt", "w") as out_file:
-        out_file.write(str(outputs))
