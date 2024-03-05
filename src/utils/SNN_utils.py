@@ -1,9 +1,7 @@
 import numpy as np
 import torch
 from tqdm import tqdm
-from feature_eval_utils import get_metrics
-
-MODEL_PATH='../models'
+from utils.feature_eval_utils import get_metrics
 
 def train_SNN(
         model, 
@@ -16,7 +14,8 @@ def train_SNN(
         n_epochs=300,
         batch_size=16, 
         display=True,
-        file_name="nn_base_params"
+        file_name="nn_base_params",
+        MODEL_PATH='../models'
         ):
     
     batch_start = torch.arange(0, X_train_tensor.shape[0], batch_size)

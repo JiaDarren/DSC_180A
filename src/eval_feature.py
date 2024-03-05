@@ -9,10 +9,11 @@ from sklearn.exceptions import ConvergenceWarning
 from multiprocessing import Pool
 from datetime import datetime
 from tqdm import tqdm
-import SNN_utils
-import feature_eval_utils as fe_util
+import utils.SNN_utils as SNN_utils
+import utils.feature_eval_utils as fe_util
 
-DATA_PATH = '../../data'
+DATA_PATH = '../data'
+MODEL_PATH = 'models'
 
 def eval_feature(X, y, i, pool_set, feature_names):
     print(f"Pool {pool_set} Feature {i+1}: {feature_names[i]}")
@@ -29,14 +30,7 @@ def eval_feature(X, y, i, pool_set, feature_names):
     y_valid_tensor = torch.tensor(y_valid, dtype=torch.float32).reshape(-1, 1)
     X_test_tensor = torch.tensor(X_test, dtype=torch.float32)
     
-    # Define and Train Models
-    with warnings.catch_warnings():
-        warnings.simplefilter("ignore", category=ConvergenceWarning)
-        # Define Logistic Regression model
-        lin_model = linear_model.LogisticRegression(max_iter=1000)
-        # Train Logistic Regression model
-        lin_model.fit(X_train, y_train)
-
+    # Define and Train Model
     # Define Sequential NN model
     model = nn.Sequential(
         nn.Linear(X.shape[1], 12),
@@ -67,12 +61,9 @@ def eval_feature(X, y, i, pool_set, feature_names):
         n_epochs = 200,
         batch_size = 128,
         display=False,
-        file_name=f"data/model_{i}"
+        file_name=f"data/model_{i}",
+        MODEL_PATH=MODEL_PATH
     )
-    
-    # Evaluate Logistic Rergression model
-    test_pred = lin_model.predict(X_test)
-    lin_reg_score = fe_util.get_metrics(test_pred, y_test, display=False)[-1]
     
     # Evaluate Sequential NN model    
     # Find optimal threshold
@@ -87,7 +78,7 @@ def eval_feature(X, y, i, pool_set, feature_names):
     X[:,i] = orig_feature
 
     # Save evaluated scores
-    return lin_reg_score, SNN_score
+    return SNN_score
 
 if __name__ == '__main__':
     print("Importing Data")
@@ -112,7 +103,7 @@ if __name__ == '__main__':
         with Pool() as pool:
             outputs = pool.starmap(eval_feature, input_args) 
 
-        with open(f"feature_scores_{pool_set}.txt", "w") as out_file:
+        with open(f"features/feature_scores_{pool_set}.txt", "w") as out_file:
             out_file.write(str(outputs))
 
     end = datetime.now()
