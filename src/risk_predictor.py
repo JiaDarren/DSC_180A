@@ -35,15 +35,12 @@ if __name__ == '__main__':
         nn.Sigmoid()
     )
     model.load_state_dict(torch.load(f'{MODEL_PATH}/nn_base_params.pt'))
-
-    threshold = 0.1
     
     # Make Prediction
     print("Predicting")
     pred_prob = model(feature_matrix_tensor).detach().numpy()[:,0]
-    pred = np.array(pred_prob > threshold).astype(int)
 
     # Save predictions
     print("Save Predictions")
-    pred_df = pd.DataFrame({'prediction':pred})
+    pred_df = pd.DataFrame({'prediction':pred_prob})
     pred_df.to_csv(prediction_path)
