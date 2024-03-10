@@ -16,9 +16,8 @@ def get_balance_stats(acct):
     Balance Summary Stats: get balance summary statistics at the time of evaluation
 
     Params:
-     - acct: Dataframe with features
-       ['prism_consumer_id', 'prism_account_id', 'account_type', 'balance', 'balance_date']
-    Output:
+     - acct: Dataframe of account balances
+    Returns:
      - Dataframe with features:
         - prism_consumer_id: numerical ID of prism consumer
         - minbalance: The maximum balance a consumer has in any of their accounts
@@ -41,10 +40,8 @@ def get_disposable_income(total_cashflow):
     all purchases and income sources in the dataset
 
     Params:
-     - total_cashflow: Dataframe with features
-       ['prism_consumer_id', 'prism_account_id', 'memo_clean', 'amount', 
-        'posted_date', 'category_description', 'evaluation_date']
-    Output:
+     - total_cashflow: Dataframe of all transactions
+    Returns:
      - Dataframe with features:
         - prism_consumer_id: numerical ID of prism consumer
         - total_balance: amount available after output and income transactions
@@ -70,22 +67,19 @@ def get_disposable_income(total_cashflow):
     }).reset_index()
     return total_balance
 
-def get_monthly_balance_stats(outflow_merged):
+def get_monthly_balance_stats(outflows):
     """
     Monthly Balance Statistics: Features that look at average monthly activity
 
     Params:
-     - outflow_merged: Dataframe with features
-       ['prism_consumer_id', 'prism_account_id', 'memo_clean', 'amount', 
-        'posted_date', 'category_description', 'evaluation_date']
-    Output:
+     - outflows: Dataframe of outflow transactions and evaluation date
+    Returns:
      - Dataframe with features:
         - prism_consumer_id: numerical ID of prism consumer
         - avg_monthly_spending: Average Monthly Spending
         - num_monthly_purchase: Average number of purchases made per month
     """
-    outflow_valid = outflow_merged[outflow_merged['posted_date'] <= outflow_merged['evaluation_date']]
-    outflow_counts = outflow_valid.groupby('prism_consumer_id').agg({
+    outflow_counts = outflows.groupby('prism_consumer_id').agg({
         'amount':['count','sum'],
         'posted_date':['min','max'],
     }).reset_index()
@@ -94,9 +88,8 @@ def get_monthly_balance_stats(outflow_merged):
 
     outflow_counts = pd.DataFrame({
         'prism_consumer_id': outflow_counts['prism_consumer_id'],
-        'avg_monthly_spending': -1 * outflow_counts['amount','sum'] / outflow_counts['date_range'],
+        'avg_monthly_spending': outflow_counts['amount','sum'] / outflow_counts['date_range'],
         'num_monthly_purchase': outflow_counts['amount','count'] / outflow_counts['date_range'],
-        # 'monthly_purchase_date': outflow_counts['posted_date','max'],
     })
 
     outflow_counts.replace([np.inf, -np.inf], 0.0, inplace=True)
@@ -110,7 +103,7 @@ def get_num_savings_transfer(inflows):
      - inflows: Dataframe with features
        ['prism_consumer_id', 'prism_account_id', 'memo_clean', 'amount', 
         'posted_date', 'category_description', 'evaluation_date']
-    Output:
+    Returns:
      - Dataframe with features:
         - prism_consumer_id: numerical ID of prism consumer
         - num_savings_transfer: count of how many times someone has pulled from savings account
@@ -129,9 +122,8 @@ def get_unsufficient_funds(acct):
     Unsufficient Funds: Does a consumer have an account that is negative or near 0?
 
     Params:
-     - acct: Dataframe with features
-       ['prism_consumer_id', 'prism_account_id', 'account_type', 'balance', 'balance_date']
-    Output:
+     - acct: Dataframe of account balances
+    Returns:
      - Dataframe with features:
         - prism_consumer_id: numerical ID of prism consumer
         - unsufficient_balance: boolean output for whether a consumer has an account that is negative or near 0.
@@ -147,9 +139,8 @@ def get_num_accounts(acct):
     'category_description' and 'prism_consumer_id' in a dataset
 
     Params:
-     - acct: Dataframe with features
-       ['prism_consumer_id', 'prism_account_id', 'account_type', 'balance', 'balance_date']
-    Output:
+     - acct: Dataframe of account balances
+    Returns:
      - Dataframe with features:
         - prism_consumer_id: numerical ID of prism consumer
         - account_count: total number of accounts each consumer has.
@@ -166,20 +157,19 @@ def get_cat_month_slp(outflows):
     of 'category_description' and 'prism_consumer_id' in a dataset
 
     Params:
-     - outflows: Dataframe with features
-       ['prism_consumer_id', 'prism_account_id', 'memo_clean', 'amount', 
-        'posted_date', 'category_description', 'evaluation_date']
-    Output:
+     - outflows: Dataframe of outflow transactions
+    Returns:
      - Dataframe with features:
         - prism_consumer_id: numerical ID of prism consumer
         - [category name]_slp: slope of [category name]
     """
-    # Create 'month' and 'year' Columns
-    outflows['month'] = pd.to_datetime(outflows['posted_date']).dt.month
-    outflows['year'] = pd.to_datetime(outflows['posted_date']).dt.year
-    
     # Group Data by Categories and Consumers
-    cat_group = outflows.groupby([ 'category_description', 'prism_consumer_id','year', 'month'])['amount'].sum().reset_index()
+    cat_group = (
+        outflows
+        .groupby(['category_description', 'prism_consumer_id','posted_year', 'posted_month'])['amount']
+        .sum()
+        .reset_index()
+    )
     
     # Calculate Slopes
     merged_df = pd.DataFrame()
@@ -207,10 +197,8 @@ def get_non_essential_ratio(outflows):
     Non-Essential Ratio: non-essential spending for each consumer based on defined essential categories
 
     Params:
-     - outflows: Dataframe with features
-       ['prism_consumer_id', 'prism_account_id', 'memo_clean', 'amount', 
-        'posted_date', 'category_description', 'evaluation_date']
-    Output:
+     - outflows: Dataframe of outflow transactions
+    Returns:
      - Dataframe with features:
         - prism_consumer_id: numerical ID of prism consumer
         - non_ess_ratio: ratio of spending spent on non-essentials
@@ -251,24 +239,17 @@ def get_stdzd_bal_slp(total_cashflow, acct):
     Standardized Balance Slope: Calculate the standardized balance slope of monthly balance
 
     Params:
-     - total_cashflow: Dataframe with features
-       ['prism_consumer_id', 'prism_account_id', 'memo_clean', 'amount', 
-        'posted_date', 'category_description', 'evaluation_date']
-     - acct: Dataframe with features
-       ['prism_consumer_id', 'prism_account_id', 'account_type', 'balance', 'balance_date']
-    Output:
+     - total_cashflow: Dataframe of all transactions
+     - acct: Dataframe of account balances
+    Returns:
      - Dataframe with features:
         - prism_consumer_id: numerical ID of prism consumer
         - stdzd_bal_slp: ratio of spending spent on non-essentials
     """
     total_c = total_cashflow.copy()
     
-    # Extract the month and year from the posted_date column
-    total_c['month'] = pd.to_datetime(total_c['posted_date']).dt.month
-    total_c['year'] = pd.to_datetime(total_c['posted_date']).dt.year
-    
     # Group by consumer, year, and month to sum the amounts
-    total_c = total_c.groupby(['prism_consumer_id', 'year', 'month'])['amount'].sum().reset_index()
+    total_c = total_c.groupby(['prism_consumer_id', 'posted_year', 'posted_month'])['amount'].sum().reset_index()
     
     # Get unique consumer IDs
     unique_ids = total_c['prism_consumer_id'].unique()
@@ -311,20 +292,14 @@ def get_PRR(total_cashflow):
     positive out of all months in the dataset for each consumer
 
     Params:
-     - total_cashflow: Dataframe with features
-       ['prism_consumer_id', 'prism_account_id', 'memo_clean', 'amount', 
-        'posted_date', 'category_description', 'evaluation_date']
-    Output:
+     - total_cashflow: Dataframe of all transactions
+    Returns:
      - Dataframe with features:
         - prism_consumer_id: numerical ID of prism consumer
         - PRR: ratio of positive cashflow monthly balances
     """
-    # Get month and year of inflow and outflow
-    total_cashflow = total_cashflow.copy()
-    total_cashflow['month'] = pd.to_datetime(total_cashflow['posted_date']).dt.month
-    total_cashflow['year'] = pd.to_datetime(total_cashflow['posted_date']).dt.year
     # Group transactions by month and calculate remaining balance on each month for each client
-    total_cashflow = total_cashflow.groupby(['prism_consumer_id', 'year', 'month'])['amount'].sum().reset_index()
+    total_cashflow = total_cashflow.groupby(['prism_consumer_id', 'posted_year', 'posted_month'])['amount'].sum().reset_index()
     # Determine if the remaining amount is positive for each month
     total_cashflow['PRR'] = (total_cashflow['amount'] > 0).astype(int)
     # Calculate the ratio of months with positive remaining amounts
@@ -337,26 +312,32 @@ def get_CR(outflows):
     in which a consumer pays of a loan
 
     Params:
-     - outflows: Dataframe with features
-       ['prism_consumer_id', 'prism_account_id', 'memo_clean', 'amount', 
-        'posted_date', 'category_description', 'evaluation_date']
-    Output:
+     - outflows: Dataframe of outflow transactions
+    Returns:
      - Dataframe with features:
         - prism_consumer_id: numerical ID of prism consumer
         - CR: max number of consecutive months where consumer pays loan
     """
-    # Get month range
-    outflow_transactions = outflows.copy()
-    outflow_transactions['month'] = pd.to_datetime(outflow_transactions['posted_date']).dt.month
-    outflow_transactions['year'] = pd.to_datetime(outflow_transactions['posted_date']).dt.year
-    outflow_transactions['date_id'] = 12 * (outflow_transactions['year'] - min(outflow_transactions['year'])) + outflow_transactions['month']
     # Get number of transactions for each category for each consumer
-    cat_groups = outflow_transactions.groupby(['prism_consumer_id', 'date_id', 'category_description']).size().reset_index(name='count')
+    cat_groups = (
+        outflows
+        .groupby(['prism_consumer_id', 'posted_date_id', 'category_description'])
+        .size()
+        .reset_index(name='count')
+    )
     # Find number of months where consumer spent money on credit card payments or loans
-    cat_counts = cat_groups.groupby(['prism_consumer_id','category_description']).agg({'count':'count', 'date_id':['min', 'max']}).reset_index()
+    cat_counts = (
+        cat_groups
+        .groupby(['prism_consumer_id','category_description'])
+        .agg({'count':'count', 'posted_date_id':['min', 'max']})
+        .reset_index()
+    )
     credit_counts = cat_counts[np.isin(cat_counts['category_description'], ['LOAN', 'CREDIT_CARD_PAYMENT'])].copy()
     # Get maximum credit ratio
-    credit_counts['CR'] = credit_counts['count','count'] / (credit_counts['date_id','max'] - credit_counts['date_id','min'] + 1)
+    credit_counts['CR'] = (
+        credit_counts['count','count'] / 
+        (credit_counts['posted_date_id','max'] - credit_counts['posted_date_id','min'] + 1)
+    )
     return credit_counts.groupby('prism_consumer_id')['CR'].max().reset_index()
 
 def get_cat_stats(outflows):
@@ -364,10 +345,8 @@ def get_cat_stats(outflows):
     Total Category Summary Statistics: summary statistics of category outflows
 
     Params:
-     - outflows: Dataframe with features
-       ['prism_consumer_id', 'prism_account_id', 'memo_clean', 'amount', 
-        'posted_date', 'category_description', 'evaluation_date']
-    Output:
+     - outflows: Dataframe of outflow transactions
+    Returns:
      - Dataframe with features:
         - prism_consumer_id: numerical ID of prism consumer
         - mean[category name]: mean of [category name]
@@ -396,23 +375,16 @@ def avg_monthly_cat_num_trans(outflows):
     Monthly Category Aggregates: get the average number of outflow transactions a consumer makes per month
 
     Params:
-     - outflows: Dataframe with features
-       ['prism_consumer_id', 'prism_account_id', 'memo_clean', 'amount', 
-        'posted_date', 'category_description', 'evaluation_date']
-    Output:
+     - outflows: Dataframe of outflow transactions
+    Returns:
      - Dataframe with features:
         - prism_consumer_id: numerical ID of prism consumer
         - [category name]_count: average number of [category name] outflow transactions per month 
     """
-    # Get month range
-    outflow_transactions = outflows.copy()
-    outflow_transactions['month'] = pd.to_datetime(outflow_transactions['posted_date']).dt.month
-    outflow_transactions['year'] = pd.to_datetime(outflow_transactions['posted_date']).dt.year
-    outflow_transactions['date_id'] = 12 * (outflow_transactions['year'] - min(outflow_transactions['year'])) + outflow_transactions['month']
     # Get average number of transaction per month
     return (
-        outflow_transactions
-        .groupby(['prism_consumer_id', 'category_description', 'date_id'])['amount']
+        outflows
+        .groupby(['prism_consumer_id', 'category_description', 'posted_date_id'])['amount']
         .count()
         .reset_index(name='count')
         .groupby(['prism_consumer_id', 'category_description'])
@@ -429,23 +401,16 @@ def avg_monthly_cat_spending(outflows):
     Monthly Category Aggregates: get the average amount a consumer spends per month
 
     Params:
-     - outflows: Dataframe with features
-       ['prism_consumer_id', 'prism_account_id', 'memo_clean', 'amount', 
-        'posted_date', 'category_description', 'evaluation_date']
-    Output:
+     - outflows: Dataframe of outflow transactions
+    Returns:
      - Dataframe with features:
         - prism_consumer_id: numerical ID of prism consumer
         - [category name]_mean: average amount spent in [category name] per month 
     """
-    # Get month range
-    outflow_transactions = outflows.copy()
-    outflow_transactions['month'] = pd.to_datetime(outflow_transactions['posted_date']).dt.month
-    outflow_transactions['year'] = pd.to_datetime(outflow_transactions['posted_date']).dt.year
-    outflow_transactions['date_id'] = 12 * (outflow_transactions['year'] - min(outflow_transactions['year'])) + outflow_transactions['month']
     # Get average amount of transaction per month
     return (
-        outflow_transactions
-        .groupby(['prism_consumer_id', 'category_description', 'date_id'])['amount']
+        outflows
+        .groupby(['prism_consumer_id', 'category_description', 'posted_date_id'])['amount']
         .mean()
         .reset_index(name='mean_transaction')
         .groupby(['prism_consumer_id', 'category_description'])
@@ -462,10 +427,8 @@ def total_prop_spending(outflows):
     Proportion of Spending: proportion of spending spent in each category
 
     Params:
-     - outflows: Dataframe with features
-       ['prism_consumer_id', 'prism_account_id', 'memo_clean', 'amount', 
-        'posted_date', 'category_description', 'evaluation_date']
-    Output:
+     - outflows: Dataframe of outflow transactions
+    Returns:
      - Dataframe with features:
         - prism_consumer_id: numerical ID of prism consumer
         - [category name]_prop: percentage amount spent in [category name]
@@ -490,10 +453,8 @@ def get_overdraft_freq(outflows):
     Overdraft Frequency: Marks users that have more than 1 monthly overdraft transaction
 
     Params:
-     - outflows: Dataframe with features
-       ['prism_consumer_id', 'prism_account_id', 'memo_clean', 'amount', 
-        'posted_date', 'category_description', 'evaluation_date']
-    Output:
+     - outflows: Dataframe of outflow transactions
+    Returns:
      - Series with features:
         - index: prism_consumer_id (numerical ID of prism consumer)
         - values: int value indicating if user has more than 1 monthly overdraft transaction
@@ -512,16 +473,14 @@ def get_overdraft_freq(outflows):
     return overdraft_users
 
 
-def add_outflow_ages(outflows):
+def add_transaction_ages(t_data, cons):
     """
-    Helper function that adds date and age values to outflows transactions
+    Helper function that adds date and age values to transaction dataset
 
     Params:
-     - outflows: Dataframe with features
-       ['prism_consumer_id', 'prism_account_id', 'memo_clean', 'amount', 
-        'posted_date', 'category_description', 'evaluation_date']
-    Output:
-     - outflows dataset with additional columns:
+     - t_data: Dataframe of transaction data (inflow/outflow)
+    Returns:
+     - Transaction dataset with additional columns:
         - posted_month: month of transaction
         - posted_year: year of transaction
         - posted_date_id: id unique to month and year of posted date
@@ -531,36 +490,33 @@ def add_outflow_ages(outflows):
         - age: number of days between posted date and evaluation date
         - month_age: number of months between posted date and evaluation date
     """
-    outflows = outflows.copy()
-    outflows = outflows.merge(cons[['prism_consumer_id', 'evaluation_date']], on='prism_consumer_id', how='outer').dropna()
+    t_data = t_data.copy()
+    t_data = t_data.merge(cons[['prism_consumer_id', 'evaluation_date']], on='prism_consumer_id', how='outer').dropna()
     
-    outflows['posted_month'] = pd.to_datetime(outflows['posted_date']).dt.month
-    outflows['posted_year'] = pd.to_datetime(outflows['posted_date']).dt.year
-    outflows['posted_date_id'] = 12 * (outflows['posted_year'] - min(outflows['posted_year'])) + outflows['posted_month']
+    t_data['posted_month'] = pd.to_datetime(t_data['posted_date']).dt.month
+    t_data['posted_year'] = pd.to_datetime(t_data['posted_date']).dt.year
+    t_data['posted_date_id'] = 12 * (t_data['posted_year'] - min(t_data['posted_year'])) + t_data['posted_month']
 
-    outflows['eval_month'] = pd.to_datetime(outflows['evaluation_date']).dt.month
-    outflows['eval_year'] = pd.to_datetime(outflows['evaluation_date']).dt.year
-    outflows['eval_date_id'] = 12 * (outflows['eval_year'] - min(outflows['posted_year'])) + outflows['eval_month']
+    t_data['eval_month'] = pd.to_datetime(t_data['evaluation_date']).dt.month
+    t_data['eval_year'] = pd.to_datetime(t_data['evaluation_date']).dt.year
+    t_data['eval_date_id'] = 12 * (t_data['eval_year'] - min(t_data['posted_year'])) + t_data['eval_month']
 
-    outflows['age'] = (outflows['evaluation_date'] - outflows['posted_date']).apply(lambda x: x.days)
-    outflows['month_age'] = outflows['eval_date_id'] - outflows['posted_date_id']
-    return outflows
+    t_data['age'] = (t_data['evaluation_date'] - t_data['posted_date']).apply(lambda x: x.days)
+    t_data['month_age'] = t_data['eval_date_id'] - t_data['posted_date_id']
+    return t_data
 
-def get_cum_weighted_def_val(outflows):
+def get_cum_weighted_def_val(outflows, cons):
     """
     Cumulative Weighted Default Value: gets cumulative sum of default values weighted by age
 
     Params:
-     - outflows: Dataframe with features
-       ['prism_consumer_id', 'prism_account_id', 'memo_clean', 'amount', 
-        'posted_date', 'category_description', 'evaluation_date']
-    Output:
+     - outflows: Dataframe of outflow transactions
+     - cons: Dataframe of consumer evaluation times
+    Returns:
      - Dataframe with features:
         - prism_consumer_id: numerical ID of prism consumer
         - cum_weighted_def_val: cumulative sum of default value
     """
-    outflows = add_outflow_ages(outflows)
-
     overdraft_outflows = (
         outflows[outflows['category_description'] == 'OVERDRAFT']
         [['prism_consumer_id', 'amount', 'age', 'month_age']]
@@ -585,11 +541,19 @@ def get_cum_weighted_def_val(outflows):
 def create_feature_matrix(cons, acct, inflows, outflows, output_file_path):
     # Create additional combination datasets
     print("Creating additional Datasets")
-    cons_eval_dates = cons.sort_values('evaluation_date')[['prism_consumer_id','evaluation_date']]
-    outflow_merged = pd.merge(outflows, cons_eval_dates, on="prism_consumer_id", how="left")
-    inflow_merged = pd.merge(inflows, cons_eval_dates, on="prism_consumer_id", how="left")
-    outflow_merged['amount'] = outflow_merged['amount'] * -1
-    total_cashflow = pd.concat([inflow_merged, outflow_merged])
+    # Create date values in outflows
+    outflows = add_transaction_ages(outflows, cons)
+    inflows = add_transaction_ages(inflows, cons)
+
+    cash_outflow = outflows.copy()
+    cash_inflow = inflows.copy()
+    # add prefix to indicate inflow or outflow transaction category
+    cash_inflow['category_description'] = 'inflow_' + cash_inflow['category_description']
+    cash_outflow['category_description'] = 'outflow_' + cash_outflow['category_description']
+
+    # make outflow transactions negative, and combine inflow and outflow datasets
+    cash_outflow['amount'] = cash_outflow['amount'] * -1
+    total_cashflow = pd.concat([cash_inflow, cash_outflow])
     total_cashflow = total_cashflow[total_cashflow['posted_date'] <= total_cashflow['evaluation_date']]
     
     # Get all Features
@@ -597,7 +561,7 @@ def create_feature_matrix(cons, acct, inflows, outflows, output_file_path):
     features = []
     features.append(get_balance_stats(acct))
     features.append(get_disposable_income(total_cashflow))
-    features.append(get_monthly_balance_stats(outflow_merged))
+    features.append(get_monthly_balance_stats(outflows))
     features.append(get_num_savings_transfer(inflows))
     features.append(get_unsufficient_funds(acct))
     features.append(get_num_accounts(acct))
@@ -611,7 +575,7 @@ def create_feature_matrix(cons, acct, inflows, outflows, output_file_path):
     features.append(avg_monthly_cat_spending(outflows))
     features.append(total_prop_spending(outflows))
     features.append(get_overdraft_freq(outflows))
-    features.append(get_cum_weighted_def_val(outflows))
+    features.append(get_cum_weighted_def_val(outflows, cons))
 
     # Merge all features into feature matrix
     print("Merging features to final feature matrix")
@@ -653,6 +617,6 @@ if __name__ == '__main__':
     inflows = pd.read_parquet(f'{DATA_PATH}/raw/q2_inflows_final.pqt')
     outflows = pd.read_parquet(f'{DATA_PATH}/raw/q2_outflows_final.pqt')
 
-    output_file_path = f"{DATA_PATH}/processed/feature_matrix.csv"
+    output_file_path = f"{DATA_PATH}/processed/test_feature_matrix.csv"
 
     create_feature_matrix(cons, acct, inflows, outflows, output_file_path)
