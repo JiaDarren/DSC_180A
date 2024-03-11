@@ -86,8 +86,8 @@ if __name__ == '__main__':
     feature_matrix = pd.read_csv(f'{DATA_PATH}/processed/feature_matrix.csv')
     
     print("Preparing Data for Feature Evaluation")  
-    X = feature_matrix.iloc[:,1:].to_numpy()
-    y = feature_matrix.iloc[:,0].to_numpy()
+    X = feature_matrix.drop(['FPF_TARGET', 'prism_consumer_id'], axis=1).to_numpy()
+    y = feature_matrix[['FPF_TARGET']].to_numpy()
     num_features = X.shape[1]
     feature_names = dict(zip(
         np.arange(0, num_features),
