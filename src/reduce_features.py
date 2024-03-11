@@ -5,7 +5,7 @@ import numpy as np
 DATA_PATH = '../data'
 OUTPUTS_PATH = '../src/features'
 
-def get_top_features(include_y, input_file_path, output_file_path):
+def get_top_features(include_y, feature_matrix):
     # Read scores from eval_feature.py
     # Split scores into model-specific scores
     scores = []
@@ -16,14 +16,11 @@ def get_top_features(include_y, input_file_path, output_file_path):
     # Get median score from all evaluations
     scores = np.median(scores, axis=0)
 
-    # Get feature names
-    feature_matrix = pd.read_csv(input_file_path)
-    if include_y:
-        feature_names = list(feature_matrix.iloc[:,1:].columns)
-    else:
-        feature_names = list(feature_matrix.columns)
-
     # Bind feature name with associated score
+    if include_y:
+        feature_names = list(feature_matrix.iloc[:,1:-1].columns)
+    else:
+        feature_names = list(feature_matrix.iloc[:,1:].columns)
     scores = dict(zip(feature_names, scores))
 
     # Sort based on score
@@ -31,24 +28,21 @@ def get_top_features(include_y, input_file_path, output_file_path):
 
     # Save top 40 features
     top_scores = [name for name,_ in sorted_scores[:40]]
+    top_scores.insert(0, 'prism_consumer_id')
+    if include_y: 
+        top_scores.append('FPF_TARGET')
+    top_score_matrix = feature_matrix[top_scores]
 
-    # Get top 40 features
-    feature_matrix = feature_matrix[top_scores]
-
-    if include_y:
-        # Append target to beginning of feature matrix
-        feature_matrix.insert(
-            0, 
-            column='FPF_TARGET',
-            value=feature_matrix['FPF_TARGET']
-        )
     # Save feature matrix
-    feature_matrix.to_csv(output_file_path, index=False)
+    return top_score_matrix
 
 
 if __name__ == '__main__':
     include_y = False
     input_file_path = f'{DATA_PATH}/processed/HOLDOUT_feature_matrix.csv'
     output_file_path = f'{DATA_PATH}/processed/HOLDOUT_SNN_feature_matrix.csv'
+    # Get feature names
+    feature_matrix = pd.read_csv(input_file_path)
 
-    get_top_features(include_y, input_file_path, output_file_path)
+    top_score_matrix = get_top_features(include_y, feature_matrix)
+    top_score_matrix.to_csv(output_file_path, index=False)

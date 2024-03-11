@@ -538,7 +538,7 @@ def get_cum_weighted_def_val(outflows, cons):
 #==============#
 # Main Process #
 #==============#
-def create_feature_matrix(cons, acct, inflows, outflows, output_file_path):
+def create_feature_matrix(cons, acct, inflows, outflows):
     # Create additional combination datasets
     print("Creating additional Datasets")
     # Create date values in outflows
@@ -592,7 +592,7 @@ def create_feature_matrix(cons, acct, inflows, outflows, output_file_path):
     # Final Feature Matrix
     sorted_cons = cons.sort_values('evaluation_date')
 
-    dropped_cols = ['prism_consumer_id', 'evaluation_date', 'feature_date', 'APPROVED']
+    dropped_cols = ['evaluation_date', 'feature_date', 'APPROVED']
     feature_matrix = pd.merge(sorted_cons, feature_df, on='prism_consumer_id', how='left')
 
     # Make sure no invalid training data is pulled
@@ -609,14 +609,15 @@ def create_feature_matrix(cons, acct, inflows, outflows, output_file_path):
 
     # Save final feature matrix
     print("Saving feature matrix")
-    feature_matrix.to_csv(output_file_path, index=False)
+    return feature_matrix
 
 if __name__ == '__main__':
-    cons = pd.read_parquet(f'{DATA_PATH}/raw/q2_consDF_final.pqt')
-    acct = pd.read_parquet(f'{DATA_PATH}/raw/q2_acctDF_final.pqt')
-    inflows = pd.read_parquet(f'{DATA_PATH}/raw/q2_inflows_final.pqt')
-    outflows = pd.read_parquet(f'{DATA_PATH}/raw/q2_outflows_final.pqt')
+    cons = pd.read_parquet(f'{DATA_PATH}/raw/q2_consDF_HOLDOUT_notags_final.pqt')
+    acct = pd.read_parquet(f'{DATA_PATH}/raw/q2_acctDF_HOLDOUT_final.pqt')
+    inflows = pd.read_parquet(f'{DATA_PATH}/raw/q2_inflows_HOLDOUT_final.pqt')
+    outflows = pd.read_parquet(f'{DATA_PATH}/raw/q2_outflows_HOLDOUT_final.pqt')
 
-    output_file_path = f"{DATA_PATH}/processed/test_feature_matrix.csv"
+    output_file_path = f"{DATA_PATH}/processed/HOLDOUT_feature_matrix.csv"
 
-    create_feature_matrix(cons, acct, inflows, outflows, output_file_path)
+    feature_matrix = create_feature_matrix(cons, acct, inflows, outflows, output_file_path)
+    feature_matrix.to_csv(output_file_path, index=False)
