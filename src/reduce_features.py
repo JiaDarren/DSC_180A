@@ -18,9 +18,17 @@ def get_top_features(include_y, feature_matrix):
 
     # Bind feature name with associated score
     if include_y:
-        feature_names = list(feature_matrix.iloc[:,1:-1].columns)
+        feature_names = list(
+            feature_matrix
+            .drop(['FPF_TARGET', 'prism_consumer_id'], axis=1)
+            .columns
+        )
     else:
-        feature_names = list(feature_matrix.iloc[:,1:].columns)
+        feature_names = list(
+            feature_matrix
+            .drop('prism_consumer_id', axis=1)
+            .columns
+        )
     scores = dict(zip(feature_names, scores))
 
     # Sort based on score
