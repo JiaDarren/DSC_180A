@@ -42,6 +42,7 @@ To retrain/run any models for yourself, ensure you have access to the following 
   - 'amount': amount of transaction
   - 'posted_date': date transaction was posted
   - 'category_description': transaction category description
+
 *If you have access to the dsc180-fa23, clone the relevant github repo in the same directory as this repo and run dataset_init.ipynb to set up the raw datasets.*
 
 ### Feature Evaluation
