@@ -43,7 +43,7 @@ To retrain/run any models for yourself, ensure you have access to the following 
   - 'posted_date': date transaction was posted
   - 'category_description': transaction category description
 
-*If you have access to the dsc180-fa23, clone the relevant github repo in the same directory as this repo and run dataset_init.ipynb to set up the raw datasets.*
+*If you have access to the dsc180-fa23 git, clone the relevant github repo in the same parent directory as this repo and run dataset_init.ipynb to set up the raw datasets.*
 
 ### Feature Evaluation
 **If you just want to run the model saved in the models directory, skip this section**
