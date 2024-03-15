@@ -47,6 +47,7 @@ To retrain/run any models for yourself, ensure you have access to the following 
 
 ### Feature Evaluation
 **If you just want to run the model saved in the models directory, skip this section**
+
 Once you have all the raw datasets, run 'create_features.py' to build the feature matrix. Make sure the paths and file names corresponse to the correct datasets.
 
 Run 'eval_feature.py' to evaluate feature impact with feature permutation method.
@@ -55,6 +56,7 @@ Run 'reduce_features.py' to create feature matrix with reduced features.
 
 ### Build Model
 **If you just want to run the model saved in the models directory, skip this section**
+
 In the event that there isn't a model saved in the models directory, or you want to train your own model, run 'model_testing.ipynb'. Make sure that the file paths correspond to the appropriate datasets. 
 
 ### Model Prediction
